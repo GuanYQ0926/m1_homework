@@ -1,3 +1,4 @@
+from matplotlib import pyplot as plt
 import sys
 import json
 sys.path.append('/usr/local/lib/python2.7/site-packages')
@@ -22,7 +23,7 @@ class ExtendTree:
 
     def __init__(self, img, startPoint, jsonFilePath='../asset/tree.json'):
         # 0: hand, 255: background
-        self.img = cv2.threshold(img, 250, 255, cv2.THRESH_BINARY)
+        _, self.img = cv2.threshold(img, 250, 255, cv2.THRESH_BINARY)
         self.imgRow, self.imgCol = self.img.shape
         self.startPoint = startPoint
         self.nodeList = []
@@ -50,37 +51,41 @@ class ExtendTree:
             if row - 1 >= 0 and self.recordMat[row - 1, col] == 0:  # undealed
                 self.recordMat[row - 1, col] = 1  # write in recordmat
                 top_val = self.img[row - 1, col]
-                top_node = TreeNode(top_val, top_pt, current_node,
-                                    None, None, None, None)
-                newNodeLists.append(top_node)
-                current_node.tChild = top_node
+                if top_val == 0:
+                    top_node = TreeNode(top_val, top_pt, current_node,
+                                        None, None, None, None)
+                    newNodeLists.append(top_node)
+                    current_node.tChild = top_node
 
             right_pt = [col + 1, row]
             if col + 1 < self.imgCol and self.recordMat[row, col + 1] == 0:
                 self.recordMat[row, col + 1] = 1
                 right_val = self.img[row, col + 1]
-                right_node = TreeNode(right_val, right_pt, current_node,
-                                      None, None, None, None)
-                newNodeLists.append(right_node)
-                current_node.rChild = right_node
+                if right_val == 0:
+                    right_node = TreeNode(right_val, right_pt, current_node,
+                                          None, None, None, None)
+                    newNodeLists.append(right_node)
+                    current_node.rChild = right_node
 
             bot_pt = [col, row + 1]
             if row + 1 < self.imgRow and self.recordMat[row + 1, col] == 0:
                 self.recordMat[row + 1, col] = 1
                 bot_val = self.img[row + 1, col]
-                bot_node = TreeNode(bot_val, bot_pt, current_node,
-                                    None, None, None, None)
-                newNodeLists.append(bot_node)
-                current_node.bChild = bot_node
+                if bot_val == 0:
+                    bot_node = TreeNode(bot_val, bot_pt, current_node,
+                                        None, None, None, None)
+                    newNodeLists.append(bot_node)
+                    current_node.bChild = bot_node
 
             left_pt = [col - 1, row]
             if col - 1 >= 0 and self.recordMat[row, col - 1] == 0:
                 self.recordMat[row, col - 1] = 1
                 left_val = self.img[row, col - 1]
-                left_node = TreeNode(left_val, left_pt, current_node,
-                                     None, None, None, None)
-                newNodeLists.append(left_node)
-                current_node.lChild = left_node
+                if left_val == 0:
+                    left_node = TreeNode(left_val, left_pt, current_node,
+                                         None, None, None, None)
+                    newNodeLists.append(left_node)
+                    current_node.lChild = left_node
 
         self.goExtending(newNodeLists)
 
@@ -119,10 +124,48 @@ class ExtendTree:
             json.dump(dumpResult, f)
 
 
+class trackBranch:
+
+    def __init__(self, target_tree, img):
+        self.tree = target_tree
+        self.img = img
+        self.tracedNodeList = []
+
+    def track(self, direction='top'):
+        current_node = self.tree.allNodes[0]
+        temp_direction = direction
+        if temp_direction == 'top':
+            while current_node is not None:
+                self.tracedNodeList.append(current_node)
+                current_node = current_node.tChild
+        if temp_direction == 'right':
+            while current_node is not None:
+                self.tracedNodeList.append(current_node)
+                current_node = current_node.rChild
+        if temp_direction == 'bot':
+            while current_node is not None:
+                self.tracedNodeList.append(current_node)
+                current_node = current_node.bChild
+        if temp_direction == 'left':
+            while current_node is not None:
+                self.tracedNodeList.append(current_node)
+                current_node = current_node.lChild
+
+    def drawResult(self):
+        for node in self.tracedNodeList:
+            coord = (node.position[0], node.position[1])
+            cv2.circle(self.img, coord, 2, (0, 0, 255), -1)
+        plt.imshow(self.img)
+        plt.show()
+
+
 if __name__ == '__main__':
     imgPath = '../asset/hands.jpeg'
     img = cv2.imread(imgPath, 0)
     startPoint = [300, 300]
     tree = ExtendTree(img, startPoint)
     tree.goExtending([tree.startNode])
-    tree.dumpToJson()
+    # tree.dumpToJson()
+    tracker = trackBranch(tree, img)
+    tracker.track('right')
+    tracker.drawResult()
