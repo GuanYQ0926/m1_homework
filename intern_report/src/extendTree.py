@@ -126,8 +126,9 @@ class ExtendTree:
 
 class trackBranch:
 
-    def __init__(self, target_tree, img):
+    def __init__(self, target_tree, img, rawImg):
         self.tree = target_tree
+        self.rawImg = rawImg
         self.img = img
         self.tracedNodeList = []
 
@@ -152,20 +153,30 @@ class trackBranch:
                 current_node = current_node.lChild
 
     def drawResult(self):
+        y_range = []
         for node in self.tracedNodeList:
+            y_range.append(self.rawImg[node.position[1]][node.position[0]])
             coord = (node.position[0], node.position[1])
             cv2.circle(self.img, coord, 2, (0, 0, 255), -1)
+        plt.figure(1)
         plt.imshow(self.img)
+
+        x_domain = np.arange(0, len(self.tracedNodeList), 1)
+        plt.figure(2)
+        plt.plot(x_domain, y_range)
+        plt.grid(True)
         plt.show()
 
 
 if __name__ == '__main__':
     imgPath = '../asset/hands.jpeg'
     img = cv2.imread(imgPath, 0)
-    startPoint = [300, 300]
+    startPoint = [300, 400]
     tree = ExtendTree(img, startPoint)
     tree.goExtending([tree.startNode])
     # tree.dumpToJson()
-    tracker = trackBranch(tree, img)
+    drawImg = cv2.imread(imgPath, 0)
+    rawImg = cv2.imread(imgPath, 0)
+    tracker = trackBranch(tree, drawImg, rawImg)
     tracker.track('right')
     tracker.drawResult()
