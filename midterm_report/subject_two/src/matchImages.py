@@ -5,7 +5,74 @@ import cv2
 import numpy as np
 
 
-img1Path = '../asset/img1.jpg'
-img2Path = '../asset/img2.jpg'
-img1 = cv2.imread(img1Path, 0)
-img2 = cv2.imread(img2Path, 0)
+class ImgStitching:
+
+    def __init__(self, img1Path='../asset/img1.jpg',
+                 img2Path='../asset/img2.jpg'):
+        self.img1Path = img1Path
+        self.img2Path = img2Path
+        self.img1 = cv2.imread(img1Path, 0)
+        self.img2 = cv2.imread(img2Path, 0)
+
+    def findFeatures(self):
+        # step1: find features
+        orb = cv2.ORB()
+        self.kp1, self.des1 = orb.detectAndCompute(self.img1, None)
+        self.kp2, self.des2 = orb.detectAndCompute(self.img2, None)
+
+    def matchFeatures(self):
+        # step2: match features
+        bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+        self.matches = bf.match(self.des1, self.des2)
+        self.matches = sorted(self.matches, key=lambda x: x.distance)
+        # match => [Dmatch]
+        # Dmatch => queryIdx.pt:kp1,  trainIdx.pt:kp2
+
+    def calcHomography(self):
+        # step3: calculate Homography
+        selected_pts1 = []
+        selected_pts2 = []
+        for i in xrange(4):
+            kp1_index = self.matches[1 + i].queryIdx
+            kp2_index = self.matches[1 + i].trainIdx
+            temp_pt1 = [self.kp1[kp1_index].pt[0],
+                        self.kp1[kp1_index].pt[1]]
+            temp_pt2 = [self.kp2[kp2_index].pt[0],
+                        self.kp2[kp2_index].pt[1]]
+            selected_pts1.append(temp_pt1)
+            selected_pts2.append(temp_pt2)
+        self.img1_pts = np.array(selected_pts1)  # .reshape(-1, 1, 2)
+        self.img2_pts = np.array(selected_pts2)  # .reshape(-1, 1, 2)
+        print(self.img1_pts, self.img2_pts)
+        self.h, self.status = cv2.findHomography(
+            self.img1_pts, self.img2_pts, cv2.RANSAC, 5.0)
+        print(type(self.h))
+
+    def processImage(self):
+        img_out = cv2.warpPerspective(self.img1, self.h * -1000,
+                                      (2 * self.img2.shape[1], 2
+                                       * self.img2.shape[0]))
+        img_out[:self.img2.shape[0], :self.img2.shape[1]] = self.img2
+        plt.figure(1)
+        plt.imshow(self.img1)
+        plt.figure(2)
+        plt.imshow(self.img2)
+        plt.figure(3)
+        plt.imshow(img_out)
+        plt.show()
+
+    def testHomography(self):
+        for point in self.img1_pts:
+            temp_pt = np.array([point[0][0], point[0][1], 1])
+            result = temp_pt.dot(self.h)
+            result = result / result[2] * (-1000.0)
+            print(temp_pt, result)
+
+
+if __name__ == '__main__':
+    test = ImgStitching()
+    test.findFeatures()
+    test.matchFeatures()
+    test.calcHomography()
+    test.processImage()
+    # test.testImage()
