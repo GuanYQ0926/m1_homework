@@ -13,6 +13,8 @@ class ImgStitching:
         self.img2Path = img2Path
         self.img1 = cv2.imread(img1Path, 0)
         self.img2 = cv2.imread(img2Path, 0)
+        self.dispaly_img1 = cv2.imread(img1Path)
+        self.dispaly_img2 = cv2.imread(img2Path)
 
     def findFeatures(self):
         # step1: find features
@@ -48,18 +50,36 @@ class ImgStitching:
             self.img1_pts, self.img2_pts, cv2.RANSAC, 5.0)
         print(type(self.h))
 
+    def drawFeatures(self):
+        for i in range(4):
+            cv2.circle(self.dispaly_img1, (int(self.img1_pts[i][0]), int(
+                self.img1_pts[i][1])), 5, (0, 255, 255), -1)
+            cv2.circle(self.dispaly_img2, (int(self.img2_pts[i][0]), int(
+                self.img2_pts[i][1])), 5, (0, 255, 255), -1)
+        cv2.imshow('img1', self.dispaly_img1)
+        cv2.imshow('img2', self.dispaly_img2)
+        c = cv2.waitKey(0)
+        if 'q' == chr(c & 255):
+            cv2.destroyAllWindows()
+
     def processImage(self):
         img_out = cv2.warpPerspective(self.img1, self.h * -1000,
                                       (2 * self.img2.shape[1], 2
                                        * self.img2.shape[0]))
         img_out[:self.img2.shape[0], :self.img2.shape[1]] = self.img2
-        plt.figure(1)
-        plt.imshow(self.img1)
-        plt.figure(2)
-        plt.imshow(self.img2)
-        plt.figure(3)
-        plt.imshow(img_out)
-        plt.show()
+        # plt.figure(1)
+        # plt.imshow(self.img1)
+        # plt.figure(2)
+        # plt.imshow(self.img2)
+        # plt.figure(3)
+        # plt.imshow(img_out)
+        # plt.show()
+        cv2.imshow('img1', self.img1)
+        cv2.imshow('img2', self.img2)
+        cv2.imshow('result', img_out)
+        c = cv2.waitKey(0)
+        if 'q' == chr(c & 255):
+            cv2.destroyAllWindows()
 
     def testHomography(self):
         for point in self.img1_pts:
@@ -74,5 +94,5 @@ if __name__ == '__main__':
     test.findFeatures()
     test.matchFeatures()
     test.calcHomography()
+    # test.drawFeatures()
     test.processImage()
-    # test.testImage()
