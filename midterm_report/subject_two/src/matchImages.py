@@ -48,7 +48,7 @@ class ImgStitching:
         print(self.img1_pts, self.img2_pts)
         self.h, self.status = cv2.findHomography(
             self.img1_pts, self.img2_pts, cv2.RANSAC, 5.0)
-        print(type(self.h))
+        print(self.h)
 
     def drawFeatures(self):
         for i in range(4):

@@ -21,9 +21,11 @@ class TreeNode:
 
 class ExtendTree:
 
-    def __init__(self, img, startPoint, jsonFilePath='../asset/tree.json'):
+    def __init__(self, img, startPoint, threshold_value,
+                 jsonFilePath='../asset/tree.json'):
         # 0: hand, 255: background
-        _, self.img = cv2.threshold(img, 230, 255, cv2.THRESH_BINARY)
+        _, self.img = cv2.threshold(
+            img, threshold_value, 255, cv2.THRESH_BINARY)
         self.imgRow, self.imgCol = self.img.shape
         self.startPoint = startPoint
         self.nodeList = []
@@ -124,7 +126,7 @@ class ExtendTree:
             json.dump(dumpResult, f)
 
 
-class trackBranch:
+class TrackBranch:
 
     def __init__(self, target_tree, img, rawImg):
         self.tree = target_tree
@@ -152,31 +154,51 @@ class trackBranch:
                 self.tracedNodeList.append(current_node)
                 current_node = current_node.lChild
 
+    def reverseTrack(self):
+        endNode = self.tree.allNodes[-5000]
+        self.tracedNodeList.append(endNode)
+        while endNode.parent is not None:
+            endNode = endNode.parent
+            self.tracedNodeList.append(endNode)
+
     def drawResult(self):
         y_range = []
         for node in self.tracedNodeList:
             y_range.append(self.rawImg[node.position[1]][node.position[0]])
             coord = (node.position[0], node.position[1])
             cv2.circle(self.img, coord, 2, (255, 0, 0), -1)
-        plt.figure(1)
-        plt.imshow(self.img)
-
         x_domain = np.arange(0, len(self.tracedNodeList), 1)
-        plt.figure(2)
+        plt.figure(1)
         plt.plot(x_domain, y_range)
         plt.grid(True)
         plt.show()
 
+        cv2.imshow('result', self.img)
+        c = cv2.waitKey(0)
+        if 'q' == chr(c & 255):
+            cv2.destroyAllWindows()
+
 
 if __name__ == '__main__':
-    imgPath = '../asset/hands2.jpeg'
+    imgPath = '../asset/myhand.jpg'
     img = cv2.imread(imgPath, 0)
-    startPoint = [200, 200]
-    tree = ExtendTree(img, startPoint)
+    '''
+    # threshold image test
+    # 220 | 130 | 160
+    _, temp_img = cv2.threshold(img, 130, 255, cv2.THRESH_BINARY)
+    cv2.imshow('threshold', temp_img)
+    c = cv2.waitKey(0)
+    if 'q' == chr(c & 255):
+        cv2.destroyAllWindows()
+    '''
+    startPoint = [305, 200]  # myhand1:200,200:200  # myhand:180,200: 150
+    threshold_value = 170
+    tree = ExtendTree(img, startPoint, threshold_value)
     tree.goExtending([tree.startNode])
-    # tree.dumpToJson()
+
     drawImg = cv2.imread(imgPath, 1)
     rawImg = cv2.imread(imgPath, 0)
-    tracker = trackBranch(tree, drawImg, rawImg)
-    tracker.track('top')
+    tracker = TrackBranch(tree, drawImg, rawImg)
+    tracker.track('right')
+    # tracker.reverseTrack()
     tracker.drawResult()
